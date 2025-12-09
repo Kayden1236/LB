@@ -15,6 +15,7 @@ const TargetHealth = 100;
 let Targets = 0;
 let score = 0;
 let damage = 50;
+let BulletSize = 12;
 
 const mapWidth = 10000;
 const mapHeight = 10000;
@@ -157,32 +158,44 @@ function updateMapPosition() {
 
 function shootBullet() {
     const rect = Player.getBoundingClientRect();
-    const playerX = rect.left + rect.width / 2;
-    const playerY = rect.top + rect.height / 2;
+    const mapRect = MapDiv.getBoundingClientRect();
 
-    const angle = Math.atan2(mouseY - playerY, mouseX - playerX);
+    // Player center relative to MapDiv
+
+    const playerX = rect.left - mapRect.left + rect.width / 2;
+    const playerY = rect.top - mapRect.top + rect.height / 2;
+
+// Mouse position in MAP coordinates
+    const mouseMapX = mouseX - mapRect.left;
+    const mouseMapY = mouseY - mapRect.top;
 
     const bullet = document.createElement("div");
-    bullet.className = "bullet";
     bullet.style.position = "absolute";
-    bullet.style.width = "10px";
-    bullet.style.height = "10px";
-    bullet.style.background = "blue";
+    bullet.style.width = BulletSize + "px";
+    bullet.style.height = BulletSize + "px";
+    bullet.style.background = "yellow";
     bullet.style.borderRadius = "50%";
-    bullet.boxShadow = "0 0 20px blue";
+    bullet.style.left = (playerX - 10) + "px";
+    bullet.style.top = (playerY - 10) + "px";
+    bullet.style.zIndex = "9999";
 
-    bullet.style.left = playerX + "px";
-    bullet.style.top = playerY + "px";
+    console.log(playerX, playerY);
 
-    document.body.appendChild(bullet);
+    MapDiv.appendChild(bullet);
+
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const angle = Math.atan2(mouseY - y, mouseX - x);
 
     bullets.push({
         el: bullet,
         x: playerX,
         y: playerY,
-        vx: Math.cos(angle) * bulletSpeed,
-        vy: Math.sin(angle) * bulletSpeed
+        speed: bulletSpeed,
+        vx: Math.cos(angle),
+        vy: Math.sin(angle)
     });
+
 }
 
 function clamp(value, min, max) {
@@ -217,8 +230,8 @@ function updateBullets() {
     for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
 
-        b.x += b.vx;
-        b.y += b.vy;
+        b.x += b.vx * b.speed;
+        b.y += b.vy * b.speed;
 
         b.el.style.left = b.x + "px";
         b.el.style.top = b.y + "px";
@@ -281,9 +294,9 @@ function updateBullets() {
         //remove bullet if out of bounds
         if (
             b.x < 0 ||
-            b.x > window.innerWidth ||
+            b.x > mapWidth ||
             b.y < 0 ||
-            b.y > window.innerHeight
+            b.y > mapHeight
         ) {
             b.el.remove();
             bullets.splice(i, 1);
@@ -346,9 +359,21 @@ function LoadTargets() {
     }
 }
 
+// Player Health Bar (not functional yet)
+let playerHealth = 100;
+let playerMaxHealth = 100;
+const HealthBar = DisplayHealthBar(Player, playerHealth, playerMaxHealth).HealthBar;
+let innerBar = DisplayHealthBar(Player, playerHealth, playerMaxHealth).innerBar;
+
+HealthBar.appendChild(innerBar);
+Player.appendChild(HealthBar);
+
+//update loop
 setInterval(() => {
     LoadTargets();
+    innerBar.style.width = clamp((playerHealth / playerMaxHealth) * 100, 0, 100) + "%";
 }, 100);
+// Initial
 centerPlayer();
 rotateTowardMouse();
 movement();
